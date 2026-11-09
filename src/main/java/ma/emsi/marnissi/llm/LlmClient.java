@@ -12,7 +12,8 @@ public class LlmClient {
     private final GuideTouristique assistant;
 
     public LlmClient() {
-        // La clé est fournie au serveur, jamais enregistrée dans Git.
+        // La clé Gemini doit être configurée sur le serveur Payara.
+        // Elle ne doit jamais être enregistrée dans Git.
         String apiKey = System.getProperty("GEMINI_KEY");
 
         if (apiKey == null || apiKey.isBlank()) {
@@ -26,16 +27,34 @@ public class LlmClient {
                 .temperature(0.7)
                 .build();
 
-        // Chaque requête REST est indépendante :
-        // aucune mémoire conversationnelle partagée entre utilisateurs.
+        // Service sans mémoire : les requêtes REST sont indépendantes.
         assistant = AiServices.create(GuideTouristique.class, model);
     }
 
-    public String endroitsDeVisite(String villeOuPays) {
+    /**
+     * Génère les informations touristiques pour un lieu.
+     *
+     * @param villeOuPays nom de la ville ou du pays
+     * @param nombre nombre d'endroits touristiques demandés
+     * @return document JSON produit par Gemini
+     */
+    public String endroitsDeVisite(String villeOuPays, int nombre) {
+
         if (villeOuPays == null || villeOuPays.isBlank()) {
-            throw new IllegalArgumentException("Le lieu est obligatoire.");
+            throw new IllegalArgumentException(
+                    "Le nom du lieu est obligatoire.");
         }
 
-        return assistant.chat(villeOuPays);
+        if (nombre < 1 || nombre > 20) {
+            throw new IllegalArgumentException(
+                    "Le nombre d'endroits doit être compris entre 1 et 20.");
+        }
+
+        String demande = """
+                Lieu : %s
+                Nombre exact d'endroits à visiter : %d
+                """.formatted(villeOuPays, nombre);
+
+        return assistant.chat(demande);
     }
 }
